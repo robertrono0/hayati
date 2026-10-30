@@ -51,3 +51,60 @@ export const statusColor: Record<string, string> = {
 export function fullName(p: Pick<Profile, "first_name" | "last_name">) {
   return [p.first_name, p.last_name].filter(Boolean).join(" ") || "(no name)";
 }
+
+// ---------- Match stages ----------
+/** Match statuses that mean a member is "taken" and shouldn't get new suggestions. */
+export const busyStatuses = ["approved", "contacted", "introduced", "dating"];
+
+export type Stage = "needs_match" | "in_progress" | "dating" | "not_ready";
+
+export const stageLabels: Record<Stage, string> = {
+  needs_match: "Needs a match",
+  in_progress: "In progress",
+  dating: "Dating",
+  not_ready: "Not ready",
+};
+
+type MatchLite = { member_a: string; member_b: string; status: string };
+
+/** Works out each member's stage from all their matches. */
+export function stagesFor(members: { id: string; status: string }[], matches: MatchLite[]) {
+  const byMember = new Map<string, string[]>();
+  for (const m of matches) {
+    for (const id of [m.member_a, m.member_b]) {
+      byMember.set(id, [...(byMember.get(id) ?? []), m.status]);
+    }
+  }
+  const out = new Map<string, Stage>();
+  for (const mem of members) {
+    const statuses = byMember.get(mem.id) ?? [];
+    if (statuses.includes("dating")) out.set(mem.id, "dating");
+    else if (statuses.some((s) => busyStatuses.includes(s))) out.set(mem.id, "in_progress");
+    else if (["submitted", "active"].includes(mem.status)) out.set(mem.id, "needs_match");
+    else out.set(mem.id, "not_ready");
+  }
+  return out;
+}
+
+/** Set of member ids currently in an approved/contacted/introduced/dating match. */
+export function busyMembers(matches: MatchLite[], exceptMatchId?: string) {
+  const s = new Set<string>();
+  for (const m of matches as (MatchLite & { id?: string })[]) {
+    if (m.id && m.id === exceptMatchId) continue;
+    if (busyStatuses.includes(m.status)) {
+      s.add(m.member_a);
+      s.add(m.member_b);
+    }
+  }
+  return s;
+}
+
+export const matchStatusLabels: Record<string, string> = {
+  suggested: "Suggested",
+  approved: "Approved",
+  rejected: "Rejected (never re-match)",
+  contacted: "Contacted",
+  introduced: "Introduced",
+  dating: "Dating",
+  closed: "Closed",
+};

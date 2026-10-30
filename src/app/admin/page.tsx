@@ -1,9 +1,16 @@
 import Link from "next/link";
 import Badge from "@/components/Badge";
-import { requireAdmin, flatten, fullName, memberStatuses } from "@/lib/admin";
+import { requireAdmin, flatten, fullName, memberStatuses, stagesFor, stageLabels, type Stage } from "@/lib/admin";
 import { ageFromDob } from "@/lib/questionnaire";
 
-type SP = Promise<{ status?: string; gender?: string; background?: string; q?: string }>;
+type SP = Promise<{ view?: string; status?: string; gender?: string; background?: string; q?: string }>;
+
+const stageStyle: Record<Stage, string> = {
+  needs_match: "bg-gold/20 text-ink",
+  in_progress: "bg-pine/20 text-pine",
+  dating: "bg-pine text-ivory",
+  not_ready: "bg-sand text-ink/60",
+};
 
 export default async function AdminMembers({ searchParams }: { searchParams: SP }) {
   const { supabase } = await requireAdmin();
@@ -15,12 +22,22 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
     .order("created_at", { ascending: false });
 
   const all = (data ?? []).map(flatten);
-  const counts = Object.fromEntries(memberStatuses.map((s) => [s, all.filter((m) => m.status === s).length]));
+  const { data: matchRows } = await supabase.from("matches").select("member_a, member_b, status");
+  const stages = stagesFor(all, matchRows ?? []);
+  const views: { key: Stage | "all"; label: string; hint: string }[] = [
+    { key: "needs_match", label: "Needs a match", hint: "Ready, nobody approved yet" },
+    { key: "in_progress", label: "In progress", hint: "Approved, contacted or introduced" },
+    { key: "dating", label: "Dating", hint: "Currently seeing someone" },
+    { key: "all", label: "All members", hint: "Including drafts and paused" },
+  ];
+  const view = (sp.view ?? "all") as Stage | "all";
+  const viewCount = (k: Stage | "all") => (k === "all" ? all.length : all.filter((m) => stages.get(m.id) === k).length);
   const backgrounds = [...new Set(all.map((m) => String(m.answers.background ?? "")).filter(Boolean))].sort();
 
   const q = (sp.q ?? "").toLowerCase();
   const members = all.filter(
     (m) =>
+      (view === "all" || stages.get(m.id) === view) &&
       (!sp.status || m.status === sp.status) &&
       (!sp.gender || m.answers.gender === sp.gender) &&
       (!sp.background || m.answers.background === sp.background) &&
@@ -36,16 +53,18 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3 md:grid-cols-6">
-        {memberStatuses.map((s) => (
-          <Link key={s} href={`/admin?status=${s}`} className={`card !p-4 hover:border-gold ${sp.status === s ? "border-gold" : ""}`}>
-            <p className="text-2xl font-semibold text-pine">{counts[s]}</p>
-            <p className="text-xs capitalize text-ink/60">{s}</p>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {views.map((v) => (
+          <Link key={v.key} href={`/admin?view=${v.key}`} className={`card !p-4 transition hover:border-gold ${view === v.key ? "!border-pine ring-1 ring-pine" : ""}`}>
+            <p className="text-3xl font-semibold text-pine">{viewCount(v.key)}</p>
+            <p className="text-sm font-medium">{v.label}</p>
+            <p className="text-xs text-ink/50">{v.hint}</p>
           </Link>
         ))}
       </div>
 
       <form className="mb-6 flex flex-wrap gap-3">
+        <input type="hidden" name="view" value={view} />
         <input name="q" defaultValue={sp.q} placeholder="Search name, email, job" className="input max-w-xs" />
         <select name="status" defaultValue={sp.status ?? ""} className="input max-w-40">
           <option value="">All statuses</option>
@@ -61,7 +80,7 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
           {backgrounds.map((b) => <option key={b}>{b}</option>)}
         </select>
         <button className="btn !py-2">Filter</button>
-        <Link href="/admin" className="self-center text-sm text-ink/60 underline">Clear</Link>
+        <Link href={`/admin?view=${view}`} className="self-center text-sm text-ink/60 underline">Clear</Link>
       </form>
 
       <div className="card overflow-x-auto !p-0">
@@ -74,6 +93,7 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
               <th className="px-4 py-3">Background</th>
               <th className="px-4 py-3">Faith</th>
               <th className="px-4 py-3">Area</th>
+              <th className="px-4 py-3">Match stage</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Joined</th>
             </tr>
@@ -90,12 +110,15 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
                 <td className="px-4 py-3">{String(m.answers.background ?? "")}</td>
                 <td className="px-4 py-3">{String(m.answers.religion ?? "")}</td>
                 <td className="px-4 py-3">{String(m.answers.area ?? "")}</td>
+                <td className="px-4 py-3">
+                  {(() => { const st = stages.get(m.id) ?? "not_ready"; return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${stageStyle[st]}`}>{stageLabels[st]}</span>; })()}
+                </td>
                 <td className="px-4 py-3"><Badge status={m.status} /></td>
                 <td className="px-4 py-3 text-ink/60">{new Date(m.created_at).toLocaleDateString()}</td>
               </tr>
             ))}
             {!members.length && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-ink/50">No members match these filters.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-ink/50">No members match these filters.</td></tr>
             )}
           </tbody>
         </table>

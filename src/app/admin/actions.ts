@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, flatten, memberStatuses, matchStatuses } from "@/lib/admin";
+import { requireAdmin, flatten, memberStatuses, matchStatuses, busyMembers, fullName } from "@/lib/admin";
 import { aiReview, hardFilter, quickScore } from "@/lib/matching";
 
 const SHORTLIST = 8;
@@ -73,15 +73,25 @@ export async function findMatches(formData: FormData) {
     const me = flatten(meRow);
     if (!me.submitted_at) throw new Error("This member hasn't submitted their questionnaire yet.");
 
-    const { data: existing } = await supabase
-      .from("matches")
-      .select("member_a, member_b")
-      .or(`member_a.eq.${memberId},member_b.eq.${memberId}`);
-    const already = new Set((existing ?? []).map((m) => (m.member_a === memberId ? m.member_b : m.member_a)));
+    const { data: allMatches } = await supabase.from("matches").select("member_a, member_b, status");
+    const matches = allMatches ?? [];
+    // Anyone already paired with this member, in ANY status (including rejected), is never suggested again.
+    const already = new Set(
+      matches
+        .filter((m) => m.member_a === memberId || m.member_b === memberId)
+        .map((m) => (m.member_a === memberId ? m.member_b : m.member_a))
+    );
+    // Anyone approved, contacted, introduced or dating with someone is off the market for now.
+    const busy = busyMembers(matches);
 
-    const pool = all.filter((c) => c.id !== memberId && !already.has(c.id) && hardFilter(me.answers, c.answers).length === 0);
+    if (busy.has(memberId)) {
+      msg = `${fullName(me)} is already in progress or dating with someone. Mark that match rejected or closed first to find new matches.`;
+    } else {
+    const pool = all.filter(
+      (c) => c.id !== memberId && !already.has(c.id) && !busy.has(c.id) && hardFilter(me.answers, c.answers).length === 0
+    );
     if (!pool.length) {
-      msg = "No new compatible members right now. Everyone either fails a dealbreaker or was already suggested.";
+      msg = "No new compatible members right now. Everyone either fails a dealbreaker, was already suggested or rejected, or is busy with another match.";
     } else {
       const shortlist = pool
         .map((c) => ({ c, q: quickScore(me.answers, c.answers) }))
@@ -109,6 +119,7 @@ export async function findMatches(formData: FormData) {
         if (insErr) throw new Error(insErr.message);
       }
       msg = `Found ${inserts.length} suggestion${inserts.length === 1 ? "" : "s"} from ${pool.length} compatible member${pool.length === 1 ? "" : "s"}.`;
+    }
     }
   } catch (e) {
     msg = `Error: ${e instanceof Error ? e.message : "Something went wrong."}`;

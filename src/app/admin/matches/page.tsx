@@ -1,6 +1,6 @@
 import Link from "next/link";
 import MatchCard, { type MatchView } from "@/components/MatchCard";
-import { requireAdmin, flatten, fullName, matchStatuses } from "@/lib/admin";
+import { requireAdmin, flatten, fullName, matchStatuses, matchStatusLabels, busyMembers } from "@/lib/admin";
 import { ageFromDob } from "@/lib/questionnaire";
 
 export default async function MatchesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
@@ -10,7 +10,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   let query = supabase.from("matches").select("*").order("created_at", { ascending: false }).limit(200);
   if (status) query = query.eq("status", status);
   const { data: matches } = await query;
-  const { data: all } = await supabase.from("matches").select("status");
+  const { data: all } = await supabase.from("matches").select("id, member_a, member_b, status");
 
   const ids = [...new Set((matches ?? []).flatMap((m) => [m.member_a, m.member_b]))];
   const { data: people } = ids.length
@@ -23,7 +23,12 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
     people: [m.member_a, m.member_b].map((pid: string) => {
       const p = map.get(pid);
       return p
-        ? { id: p.id, name: fullName(p), detail: [ageFromDob(p.answers.dob), p.answers.background].filter(Boolean).join(" · ") }
+        ? {
+            id: p.id,
+            name: fullName(p),
+            detail: [ageFromDob(p.answers.dob), p.answers.background].filter(Boolean).join(" · "),
+            busyElsewhere: busyMembers(all ?? [], m.id).has(p.id),
+          }
         : { id: pid, name: "(removed)", detail: "" };
     }),
   }));
@@ -38,7 +43,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
         <Link href="/admin/matches" className={`rounded-full border px-4 py-1.5 text-sm ${!status ? "border-pine bg-pine text-ivory" : "border-sand bg-white"}`}>All</Link>
         {matchStatuses.map((s) => (
           <Link key={s} href={`/admin/matches?status=${s}`} className={`rounded-full border px-4 py-1.5 text-sm capitalize ${status === s ? "border-pine bg-pine text-ivory" : "border-sand bg-white"}`}>
-            {s} <span className="text-xs opacity-60">{counts[s]}</span>
+            {matchStatusLabels[s].replace(" (never re-match)", "")} <span className="text-xs opacity-60">{counts[s]}</span>
           </Link>
         ))}
       </div>

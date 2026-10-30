@@ -99,7 +99,13 @@ export async function aiReview(member: Member, candidates: Member[]): Promise<Ma
   const refs = candidates.map((c, i) => ({ ref: `C${i + 1}`, c }));
   const prompt = `You are assisting a professional matchmaker for San Diego's Arab and Chaldean community. Families value faith, family closeness, shared culture and serious intentions toward marriage.
 
-Evaluate how compatible the MEMBER is with each CANDIDATE for a long-term, marriage-minded relationship. They have already passed each other's hard dealbreakers. Weigh values, faith practice, family expectations, life plans and timeline most heavily, then lifestyle and personality. Be honest about real friction points. Do not invent facts that are not in the answers. Do not judge anyone on appearance.
+Evaluate how compatible the MEMBER is with each CANDIDATE for a long-term, marriage-minded relationship. They have already passed each other's hard dealbreakers. Weigh values, faith practice, family expectations, life plans and timeline most heavily, then lifestyle and personality. Be honest about real friction points.
+
+Rules:
+- Only use facts stated in their answers. Never guess about someone's culture, character, family or values from their birthplace, ethnicity, background, occupation or appearance.
+- Strengths: the 3 most important, short phrases.
+- Concerns: only the 3 most important real differences, short phrases, ranked by how much they could affect a marriage. Ignore small differences like pets or love language unless they are clearly a big deal.
+- Summary: one or two plain sentences.
 
 MEMBER:
 ${JSON.stringify(anonymize(member.answers), null, 1)}
@@ -108,7 +114,7 @@ CANDIDATES:
 ${refs.map(({ ref, c }) => `${ref}:\n${JSON.stringify(anonymize(c.answers), null, 1)}`).join("\n\n")}
 
 Reply with ONLY a JSON array, one object per candidate, no other text:
-[{"ref":"C1","score":0-100,"summary":"one or two sentences on why they could work","strengths":"short list, comma separated","concerns":"short list, comma separated, or 'None notable'"}]`;
+[{"ref":"C1","score":0-100,"summary":"one or two sentences on why they could work","strengths":"3 short phrases separated by semicolons","concerns":"up to 3 short phrases separated by semicolons, or None notable"}]`;
 
   const msg = await client.messages.create({
     model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",

@@ -4,7 +4,7 @@ import Badge from "@/components/Badge";
 import MatchCard, { type MatchView } from "@/components/MatchCard";
 import FindMatchesButton from "@/components/FindMatchesButton";
 import { addNote, findMatches, setMemberStatus, unlockQuestionnaire } from "@/app/admin/actions";
-import { requireAdmin, flatten, fullName, memberStatuses } from "@/lib/admin";
+import { requireAdmin, flatten, fullName, memberStatuses, busyMembers } from "@/lib/admin";
 import { ageFromDob, sections } from "@/lib/questionnaire";
 import { displayAnswer } from "@/lib/matching";
 
@@ -19,10 +19,12 @@ export default async function MemberDetail({ params, searchParams }: { params: P
   if (!row) notFound();
   const m = flatten(row);
 
-  const [{ data: notes }, { data: matches }] = await Promise.all([
+  const [{ data: notes }, { data: matches }, { data: allMatches }] = await Promise.all([
     supabase.from("member_notes").select("*").eq("member_id", id).order("created_at", { ascending: false }),
     supabase.from("matches").select("*").or(`member_a.eq.${id},member_b.eq.${id}`).order("score", { ascending: false }),
+    supabase.from("matches").select("id, member_a, member_b, status"),
   ]);
+  const meBusy = busyMembers(allMatches ?? []).has(id);
 
   const otherIds = (matches ?? []).map((x) => (x.member_a === id ? x.member_b : x.member_a));
   const { data: others } = otherIds.length
@@ -34,7 +36,14 @@ export default async function MemberDetail({ params, searchParams }: { params: P
     const o = otherMap.get(x.member_a === id ? x.member_b : x.member_a);
     return {
       ...x,
-      people: o ? [{ id: o.id, name: fullName(o), detail: [ageFromDob(o.answers.dob), o.answers.background, o.answers.area].filter(Boolean).join(" · ") }] : [],
+      people: o
+        ? [{
+            id: o.id,
+            name: fullName(o),
+            detail: [ageFromDob(o.answers.dob), o.answers.background, o.answers.area].filter(Boolean).join(" · "),
+            busyElsewhere: busyMembers(allMatches ?? [], x.id).has(o.id),
+          }]
+        : [],
     };
   });
 
@@ -75,6 +84,7 @@ export default async function MemberDetail({ params, searchParams }: { params: P
             </form>
           </div>
           {!m.submitted_at && <p className="text-sm text-ink/60">Matching unlocks once this member submits their questionnaire.</p>}
+          {meBusy && <p className="rounded-lg bg-pine/10 p-3 text-sm text-pine">This member is in progress or dating. They won&apos;t be suggested to anyone else until that match is rejected or closed.</p>}
           {matchViews.map((mv) => <MatchCard key={mv.id} m={mv} back={`/admin/members/${id}`} />)}
           {m.submitted_at && !matchViews.length && <p className="text-sm text-ink/60">No suggestions yet. Click “Find matches” to run the AI.</p>}
 
