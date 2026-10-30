@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <nav className="flex gap-5 text-sm">
               <Link href="/admin" className="hover:text-gold">Members</Link>
               <Link href="/admin/matches" className="hover:text-gold">Matches</Link>
+              <Link href="/admin/checkins" className="hover:text-gold">Check-ins</Link>
             </nav>
           </div>
           <div className="flex items-center gap-4 text-sm text-ivory/70">

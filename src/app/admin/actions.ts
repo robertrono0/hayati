@@ -128,3 +128,34 @@ export async function findMatches(formData: FormData) {
   revalidatePath(back);
   redirect(`${back}?msg=${encodeURIComponent(msg)}`);
 }
+
+export async function sendCheckins(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const { emailConfigured, sendBatch, fillTemplate } = await import("@/lib/email");
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  const mode = String(formData.get("mode") || "email");
+  const subject = String(formData.get("subject") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+  let msg = "";
+
+  try {
+    if (!ids.length) throw new Error("Select at least one member.");
+    if (mode === "email") {
+      if (!emailConfigured()) throw new Error("Email sending isn't set up yet. Use \"Send from my own email\" for now.");
+      if (!subject || !body) throw new Error("The subject and message can't be empty.");
+      const { data: people, error } = await supabase.from("profiles").select("id, email, first_name").in("id", ids);
+      if (error) throw new Error(error.message);
+      const withEmail = (people ?? []).filter((p) => p.email);
+      await sendBatch(withEmail.map((p) => ({ to: p.email!, subject, text: fillTemplate(body, p.first_name) })));
+      await supabase.from("followups").insert(withEmail.map((p) => ({ member_id: p.id, channel: "email", sent_by: user.id })));
+      msg = `Sent ${withEmail.length} check-in${withEmail.length === 1 ? "" : "s"}.`;
+    } else {
+      await supabase.from("followups").insert(ids.map((id) => ({ member_id: id, channel: "manual", sent_by: user.id })));
+      msg = `Marked ${ids.length} member${ids.length === 1 ? "" : "s"} as checked in.`;
+    }
+  } catch (e) {
+    msg = `Error: ${e instanceof Error ? e.message : "Something went wrong."}`;
+  }
+  revalidatePath("/admin/checkins");
+  redirect(`/admin/checkins?msg=${encodeURIComponent(msg)}`);
+}
