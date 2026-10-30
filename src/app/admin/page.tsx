@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Badge from "@/components/Badge";
+import Avatar from "@/components/Avatar";
+import { signedPhotoUrls, photoPath } from "@/lib/photos";
 import { requireAdmin, flatten, fullName, memberStatuses, stagesFor, stageLabels, type Stage } from "@/lib/admin";
 import { ageFromDob } from "@/lib/questionnaire";
 
@@ -24,6 +26,7 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
   const all = (data ?? []).map(flatten);
   const { data: matchRows } = await supabase.from("matches").select("member_a, member_b, status");
   const stages = stagesFor(all, matchRows ?? []);
+  const photos = await signedPhotoUrls(supabase, all.map((m) => photoPath(m.answers)));
   const views: { key: Stage | "all"; label: string; hint: string }[] = [
     { key: "needs_match", label: "Needs a match", hint: "Ready, nobody approved yet" },
     { key: "in_progress", label: "In progress", hint: "Approved, contacted or introduced" },
@@ -102,8 +105,13 @@ export default async function AdminMembers({ searchParams }: { searchParams: SP 
             {members.map((m) => (
               <tr key={m.id} className="border-b border-sand/60 hover:bg-ivory">
                 <td className="px-4 py-3">
-                  <Link href={`/admin/members/${m.id}`} className="font-medium text-pine hover:underline">{fullName(m)}</Link>
-                  <p className="text-xs text-ink/50">{String(m.answers.occupation ?? "")}</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar url={photos.get(photoPath(m.answers) ?? "")} name={fullName(m)} size={44} />
+                    <div>
+                      <Link href={`/admin/members/${m.id}`} className="font-medium text-pine hover:underline">{fullName(m)}</Link>
+                      <p className="text-xs text-ink/50">{String(m.answers.occupation ?? "")}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-4 py-3">{ageFromDob(m.answers.dob) ?? ""}</td>
                 <td className="px-4 py-3">{String(m.answers.gender ?? "")}</td>

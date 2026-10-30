@@ -5,7 +5,7 @@
 // (old answers are stored under it); change the label instead.
 // =============================================================
 
-export type QuestionType = "single" | "multi" | "scale" | "text" | "longtext" | "number" | "date";
+export type QuestionType = "single" | "multi" | "scale" | "text" | "longtext" | "number" | "date" | "photo";
 
 export type Question = {
   id: string;
@@ -50,6 +50,14 @@ export const sections: Section[] = [
       { id: "height", label: "Height", type: "text", help: "For example 5'10\"" },
       { id: "marital_history", label: "Marital history", type: "single", options: ["Never married", "Divorced", "Widowed", "Separated"], required: true },
       { id: "has_children", label: "Do you have children?", type: "single", options: ["No", "Yes, they live with me", "Yes, they do not live with me"], required: true },
+      {
+        id: "photo",
+        label: "A clear photo of your face",
+        type: "photo",
+        required: true,
+        privateField: true,
+        help: "Recent, facing the camera, good lighting, no sunglasses or filters. Only our matchmaking team can see it.",
+      },
     ],
   },
   {

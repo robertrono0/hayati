@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import PhotoField from "@/components/PhotoField";
 import { sections, missingRequired, validationErrors, type Answers, type Question } from "@/lib/questionnaire";
 
 export default function QuestionnaireForm({ userId, firstName, initial }: { userId: string; firstName: string; initial: Answers }) {
@@ -74,7 +75,7 @@ export default function QuestionnaireForm({ userId, firstName, initial }: { user
 
       <div className="mt-8 space-y-8">
         {section.questions.map((q) => (
-          <Field key={q.id} q={q} value={answers[q.id]} onChange={(v) => set(q.id, v)} />
+          <Field key={q.id} q={q} userId={userId} value={answers[q.id]} onChange={(v) => set(q.id, v)} />
         ))}
       </div>
 
@@ -94,13 +95,22 @@ export default function QuestionnaireForm({ userId, firstName, initial }: { user
   );
 }
 
-function Field({ q, value, onChange }: { q: Question; value: Answers[string]; onChange: (v: Answers[string]) => void }) {
+function Field({ q, userId, value, onChange }: { q: Question; userId: string; value: Answers[string]; onChange: (v: Answers[string]) => void }) {
   const label = (
     <label className="label">
       {q.label} {q.required && <span className="text-gold">*</span>}
       {q.help && <span className="mt-1 block text-xs font-normal text-ink/50">{q.help}</span>}
     </label>
   );
+
+  if (q.type === "photo") {
+    return (
+      <div>
+        {label}
+        <PhotoField userId={userId} value={typeof value === "string" ? value : undefined} onChange={(p) => onChange(p)} />
+      </div>
+    );
+  }
 
   if (q.type === "single") {
     return (

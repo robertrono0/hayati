@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Badge from "@/components/Badge";
+import Avatar from "@/components/Avatar";
+import { signedPhotoUrls, photoPath } from "@/lib/photos";
 import MatchCard, { type MatchView } from "@/components/MatchCard";
 import FindMatchesButton from "@/components/FindMatchesButton";
 import { addNote, findMatches, setMemberStatus, unlockQuestionnaire } from "@/app/admin/actions";
@@ -32,6 +34,9 @@ export default async function MemberDetail({ params, searchParams }: { params: P
     : { data: [] };
   const otherMap = new Map((others ?? []).map((o) => { const f = flatten(o); return [f.id, f]; }));
 
+  const photos = await signedPhotoUrls(supabase, [photoPath(m.answers), ...[...otherMap.values()].map((o) => photoPath(o.answers))]);
+  const photoFor = (a: Record<string, unknown>) => photos.get(photoPath(a) ?? "") ?? null;
+
   const matchViews: MatchView[] = (matches ?? []).map((x) => {
     const o = otherMap.get(x.member_a === id ? x.member_b : x.member_a);
     return {
@@ -42,6 +47,7 @@ export default async function MemberDetail({ params, searchParams }: { params: P
             name: fullName(o),
             detail: [ageFromDob(o.answers.dob), o.answers.background, o.answers.area].filter(Boolean).join(" · "),
             busyElsewhere: busyMembers(allMatches ?? [], x.id).has(o.id),
+            photoUrl: photoFor(o.answers),
           }]
         : [],
     };
@@ -53,12 +59,16 @@ export default async function MemberDetail({ params, searchParams }: { params: P
     <div>
       <Link href="/admin" className="text-sm text-ink/60 underline">← All members</Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-6">
+          <Avatar url={photoFor(m.answers)} name={fullName(m)} size={112} />
+          <div>
           <h1 className="font-serif text-4xl text-pine">{fullName(m)}</h1>
           <p className="mt-1 text-sm text-ink/60">
             {[age && `${age} years old`, m.answers.gender, m.answers.background, m.answers.religion, m.answers.area].filter(Boolean).join(" · ")}
           </p>
           <p className="mt-1 text-sm text-ink/60">{m.email} · {m.phone || String(m.answers.phone ?? "")}</p>
+          {!photoPath(m.answers) && <p className="mt-1 text-xs text-gold">No photo uploaded yet</p>}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <Badge status={m.status} />
@@ -95,7 +105,7 @@ export default async function MemberDetail({ params, searchParams }: { params: P
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gold">{s.title}</h3>
               <dl className="grid gap-x-6 gap-y-3 text-sm md:grid-cols-2">
                 {s.questions.map((q) => {
-                  const v = displayAnswer(q.id, m.answers[q.id]);
+                  const v = q.type === "photo" ? (photoPath(m.answers) ? "Uploaded (shown at the top)" : "") : displayAnswer(q.id, m.answers[q.id]);
                   const long = q.type === "longtext";
                   return (
                     <div key={q.id} className={long ? "md:col-span-2" : ""}>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MatchCard, { type MatchView } from "@/components/MatchCard";
+import { signedPhotoUrls, photoPath } from "@/lib/photos";
 import { requireAdmin, flatten, fullName, matchStatuses, matchStatusLabels, busyMembers } from "@/lib/admin";
 import { ageFromDob } from "@/lib/questionnaire";
 
@@ -18,6 +19,8 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
     : { data: [] };
   const map = new Map((people ?? []).map((p) => { const f = flatten(p); return [f.id, f]; }));
 
+  const photos = await signedPhotoUrls(supabase, [...map.values()].map((p) => photoPath(p.answers)));
+
   const views: MatchView[] = (matches ?? []).map((m) => ({
     ...m,
     people: [m.member_a, m.member_b].map((pid: string) => {
@@ -28,6 +31,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
             name: fullName(p),
             detail: [ageFromDob(p.answers.dob), p.answers.background].filter(Boolean).join(" · "),
             busyElsewhere: busyMembers(all ?? [], m.id).has(p.id),
+            photoUrl: photos.get(photoPath(p.answers) ?? "") ?? null,
           }
         : { id: pid, name: "(removed)", detail: "" };
     }),

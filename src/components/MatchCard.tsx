@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Badge from "@/components/Badge";
+import Avatar from "@/components/Avatar";
 import { setMatchStatus } from "@/app/admin/actions";
 import { matchStatuses, matchStatusLabels } from "@/lib/admin";
 
@@ -12,7 +13,7 @@ export type MatchView = {
   status: string;
   admin_notes: string | null;
   created_at: string;
-  people: { id: string; name: string; detail: string; busyElsewhere?: boolean }[];
+  people: { id: string; name: string; detail: string; busyElsewhere?: boolean; photoUrl?: string | null }[];
 };
 
 export default function MatchCard({ m, back }: { m: MatchView; back: string }) {
@@ -30,6 +31,7 @@ export default function MatchCard({ m, back }: { m: MatchView; back: string }) {
             {m.people.map((p, i) => (
               <span key={p.id} className="flex items-center gap-2">
                 {i > 0 && <span className="text-gold">&amp;</span>}
+                <Avatar url={p.photoUrl} name={p.name} size={36} />
                 <Link href={`/admin/members/${p.id}`} className="font-medium text-pine hover:underline">{p.name}</Link>
                 <span className="text-xs text-ink/50">{p.detail}</span>
               </span>
