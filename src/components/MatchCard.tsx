@@ -70,6 +70,7 @@ export default function MatchCard({ m, back }: { m: MatchView; back: string }) {
 
 function splitList(t: string | null): string[] {
   if (!t) return [];
-  const parts = (t.includes(";") ? t.split(";") : t.split(/,(?![^(]*\))/)).map((x) => x.trim()).filter(Boolean);
-  return parts;
+  // New AI notes use semicolons; older notes are one sentence, so keep them whole.
+  if (!t.includes(";")) return [t];
+  return t.split(";").map((x) => x.trim()).filter(Boolean);
 }
