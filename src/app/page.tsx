@@ -1,103 +1,67 @@
-import Image from "next/image";
+import Link from "next/link";
+import Header from "@/components/Header";
+import { site } from "@/lib/config";
+
+const steps = [
+  { n: "01", t: "Apply privately", d: "Fill out a thoughtful questionnaire about your background, faith, family and what you want. It takes about 20 minutes." },
+  { n: "02", t: "We do the searching", d: "Our team reviews every member personally. No browsing, no swiping, and nobody can see your profile." },
+  { n: "03", t: "A personal introduction", d: "When we find someone truly compatible, we reach out to both of you first. Only when you both agree do we introduce you." },
+];
+
+const promises = [
+  { t: "Total discretion", d: "Your profile is never public. Not to other members, not to search engines, not to anyone outside our team." },
+  { t: "Our community", d: "Built for Chaldean and Arab families in San Diego who value faith, family and serious intentions." },
+  { t: "People, not algorithms", d: "Smart tools help us sort, but a real person reviews every single introduction before it happens." },
+];
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <>
+      <Header />
+      <section className="mx-auto max-w-4xl px-6 py-24 text-center">
+        <p className="mb-4 text-xs uppercase tracking-[0.3em] text-gold">{site.city} · By introduction only</p>
+        <h1 className="font-serif text-5xl leading-tight text-pine md:text-7xl">
+          Meet the one,<br />the way family would.
+        </h1>
+        <p className="mx-auto mt-6 max-w-xl text-lg text-ink/70">{site.tagline}</p>
+        <div className="mt-10 flex justify-center gap-4">
+          <Link href="/signup" className="btn">Start your application</Link>
+          <a href="#how" className="btn-outline">How it works</a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+
+      <section id="how" className="bg-white py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <h2 className="mb-12 text-center font-serif text-4xl text-pine">How it works</h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            {steps.map((s) => (
+              <div key={s.n} className="card">
+                <p className="font-serif text-4xl text-gold">{s.n}</p>
+                <h3 className="mt-3 text-lg font-semibold">{s.t}</h3>
+                <p className="mt-2 text-sm text-ink/70">{s.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 md:grid-cols-3">
+          {promises.map((p) => (
+            <div key={p.t}>
+              <div className="mb-4 h-px w-12 bg-gold" />
+              <h3 className="font-serif text-2xl text-pine">{p.t}</h3>
+              <p className="mt-2 text-sm text-ink/70">{p.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-pine py-20 text-center text-ivory">
+        <h2 className="font-serif text-4xl">Ready when you are.</h2>
+        <p className="mt-3 text-ivory/70">Applying is free and completely confidential.</p>
+        <Link href="/signup" className="mt-8 inline-flex rounded-full bg-gold px-8 py-3 text-sm font-medium text-ink hover:bg-ivory">Apply now</Link>
+      </section>
+    </>
   );
 }
